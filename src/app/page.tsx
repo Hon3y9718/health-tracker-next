@@ -71,7 +71,7 @@ export default async function DashboardPage({
     <div className="flex flex-1 flex-col gap-8 max-w-2xl mx-auto w-full p-6">
       <TimezoneSync currentTimezone={settings.timezone} />
       <header className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Health tracker</h1>
+        <h1 className="text-xl font-semibold">Health Tracker</h1>
         <div className="flex items-center gap-4">
           {accounts.length > 1 && <AccountSwitcher accounts={accounts} activeId={activeAccountId} />}
           <Link href="/history" aria-label="History" title="History" className="text-[var(--ink-secondary)]">
@@ -151,6 +151,8 @@ export default async function DashboardPage({
                 value={daily.fiber_g ?? 0}
                 target={daily.fiber_target_g!}
                 unit="g"
+                status={daily.fiber_status!}
+                statusKind="level"
               />
             </div>
           </>

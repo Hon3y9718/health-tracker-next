@@ -310,6 +310,7 @@ export type Database = {
           carbs_g: number | null
           fat_g: number | null
           fiber_g: number | null
+          fiber_status: string | null
           fiber_target_g: number | null
           log_date: string | null
           meals_logged: number | null

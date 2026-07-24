@@ -6,9 +6,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 // the size and color carry the emphasis, the text stays factual (CLAUDE.md: never
 // editorialise about intake).
 //
-// status/statusKind are optional: fiber has a target but no derived status column (rule #4
-// says don't invent one client-side), so it still gets a bar -- just a neutral fill and no
-// badge, rather than being the one tile silently missing its progress bar.
+// status/statusKind are optional so a tile with no derived status column (rule #4 says don't
+// invent one client-side) still gets a bar -- just a neutral fill and no badge, rather than
+// being the one tile silently missing its progress bar.
 export function TargetMeter({
   label,
   value,

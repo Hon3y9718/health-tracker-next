@@ -1,9 +1,9 @@
-import Link from "next/link";
 import type { WeighIn } from "@/lib/queries/weighIns";
 import { getWeighInImagesForIds, getWeighInImageUrlsByImageId } from "@/lib/queries/weighInImages";
-import { deleteWeighInAction, bulkDeleteWeighInsAction } from "@/app/log/weight/actions";
+import { bulkDeleteWeighInsAction } from "@/app/log/weight/actions";
 import { groupByLogDate, formatDateHeading } from "@/lib/date-grouping";
-import { BulkSelectProvider, SelectCheckbox, BulkActionBar } from "@/components/BulkSelect";
+import { BulkSelectProvider, BulkActionBar } from "@/components/BulkSelect";
+import { WeighInCard } from "@/components/lists/WeighInCard";
 
 // Cards, not rows: the photo is the card's main element, weight sits below it, grouped
 // under a heading per day. One batched query for all rows' images, then one batched
@@ -57,52 +57,7 @@ export async function RecentWeighIns({
               {group.items.map((w) => {
                 const { frontUrl, sideUrl } = cardImages.get(w.id) ?? {};
                 return (
-                  <li
-                    key={w.id}
-                    className="relative rounded-lg border border-[var(--gridline)] overflow-hidden flex flex-col"
-                  >
-                    <SelectCheckbox id={w.id} />
-                    {(frontUrl || sideUrl) && (
-                      <div className="flex">
-                        {frontUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element -- signed Storage URL, not a static asset
-                          <img
-                            src={frontUrl}
-                            alt="Front"
-                            className="flex-1 aspect-square object-cover"
-                          />
-                        )}
-                        {sideUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element -- signed Storage URL, not a static asset
-                          <img
-                            src={sideUrl}
-                            alt="Side"
-                            className="flex-1 aspect-square object-cover"
-                          />
-                        )}
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1 p-3">
-                      <span className="text-sm font-medium">{w.weight_kg}kg</span>
-                      <div className="flex items-center gap-3 mt-1 text-xs">
-                        <Link
-                          href={`/log/weight/${w.id}`}
-                          className="underline underline-offset-2"
-                        >
-                          Edit
-                        </Link>
-                        <form action={deleteWeighInAction}>
-                          <input type="hidden" name="id" value={w.id} />
-                          <button
-                            type="submit"
-                            className="text-[var(--status-critical)] underline underline-offset-2"
-                          >
-                            Delete
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  </li>
+                  <WeighInCard key={w.id} weighIn={w} frontUrl={frontUrl} sideUrl={sideUrl} />
                 );
               })}
             </ul>
