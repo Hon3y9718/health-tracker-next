@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState, useTransition } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 type BulkSelectContextValue = {
   selected: Set<string>;
@@ -67,35 +68,48 @@ export function BulkActionBar({
 }) {
   const { selected, clear } = useBulkSelect();
   const [isPending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (selected.size === 0) return null;
 
   return (
-    <div className="sticky bottom-4 z-20 flex items-center justify-between gap-3 rounded-lg border border-[var(--gridline)] bg-[var(--background)] px-4 py-3 shadow-lg">
-      <span className="text-sm">{selected.size} selected</span>
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={clear}
-          className="text-sm text-[var(--ink-muted)] underline underline-offset-2"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => {
-            const ids = [...selected];
-            startTransition(async () => {
-              await onDelete(ids);
-              clear();
-            });
-          }}
-          className="rounded-md bg-[var(--status-critical)] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {isPending ? "Deleting…" : `Delete ${selected.size} ${itemLabel}`}
-        </button>
+    <>
+      <div className="sticky bottom-4 z-20 flex items-center justify-between gap-3 rounded-lg border border-[var(--gridline)] bg-[var(--background)] px-4 py-3 shadow-lg">
+        <span className="text-sm">{selected.size} selected</span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={clear}
+            className="text-sm text-[var(--ink-muted)] underline underline-offset-2"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setConfirmOpen(true)}
+            className="rounded-md bg-[var(--status-critical)] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {isPending ? "Deleting…" : `Delete ${selected.size} ${itemLabel}`}
+          </button>
+        </div>
       </div>
-    </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Delete ${selected.size} ${itemLabel}?`}
+        description="This can't be undone."
+        pending={isPending}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          const ids = [...selected];
+          startTransition(async () => {
+            await onDelete(ids);
+            clear();
+            setConfirmOpen(false);
+          });
+        }}
+      />
+    </>
   );
 }
