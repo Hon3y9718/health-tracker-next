@@ -1,12 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { compressImage } from "@/lib/image-compression";
 
 // Shared by MealForm and WeightForm. Photo is optional and recommended, never required.
-// Compression happens the moment a file is picked -- the compressed File replaces the
-// input's file list via DataTransfer, so the surrounding <form>'s native submission (and
-// the existing useActionState/Server Action wiring) needs no changes to pick it up.
+//
+// Only `hiddenInputRef` is a named form field -- it's never opened directly by the user.
+// The drag-drop zone (desktop) and the camera/gallery buttons (mobile) each drive their own
+// unnamed <input>, and on pick/drop the file is compressed and injected into the hidden
+// input via DataTransfer, so the surrounding <form>'s native submission (and the existing
+// useActionState/Server Action wiring) needs no changes to pick it up. Keeping a single named
+// field also avoids duplicate `formData.get(name)` entries from multiple file inputs.
+const PICKER_ACCEPT = "image/*,.heic,.heif";
+
 export function ImageField({
   name,
   removeFieldName,
@@ -18,32 +24,56 @@ export function ImageField({
   existingImageUrl?: string | null;
   label?: string;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const hiddenInputRef = useRef<HTMLInputElement>(null);
+  const browseRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(existingImageUrl ?? null);
   const [removed, setRemoved] = useState(false);
   const [compressing, setCompressing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  async function processFile(file: File) {
+    setError(null);
     setCompressing(true);
-    setRemoved(false);
-    const compressed = await compressImage(file);
+    try {
+      const compressed = await compressImage(file);
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(compressed);
+      if (hiddenInputRef.current) hiddenInputRef.current.files = dataTransfer.files;
+      setPreviewUrl(URL.createObjectURL(compressed));
+      setRemoved(false);
+    } catch {
+      // Photo is optional -- a failed conversion/compression shouldn't block logging.
+      // Leave whatever was previously attached (or nothing) rather than uploading a raw,
+      // possibly huge or undecodable file.
+      setError("Couldn't process that photo — try a different one.");
+    } finally {
+      setCompressing(false);
+    }
+  }
 
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(compressed);
-    if (inputRef.current) inputRef.current.files = dataTransfer.files;
+  function handlePick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) void processFile(file);
+  }
 
-    setPreviewUrl(URL.createObjectURL(compressed));
-    setCompressing(false);
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) void processFile(file);
   }
 
   function handleRemove(checked: boolean) {
     setRemoved(checked);
+    setError(null);
     if (checked) {
       setPreviewUrl(null);
-      if (inputRef.current) inputRef.current.value = "";
+      if (hiddenInputRef.current) hiddenInputRef.current.value = "";
     } else {
       setPreviewUrl(existingImageUrl ?? null);
     }
@@ -64,18 +94,72 @@ export function ImageField({
         />
       )}
 
-      <div className="flex items-center gap-3">
+      <input ref={hiddenInputRef} type="file" name={name} className="hidden" />
+
+      {/* Desktop: drag-and-drop zone, click to browse */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragActive(true);
+        }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+        onClick={() => browseRef.current?.click()}
+        className="hidden md:flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-6 text-sm cursor-pointer transition-colors"
+        style={{
+          borderColor: dragActive ? "var(--series-primary)" : "var(--gridline)",
+          color: "var(--ink-muted)",
+          backgroundColor: dragActive ? "color-mix(in srgb, var(--series-primary) 8%, transparent)" : "transparent",
+        }}
+      >
+        <span>Drag and drop a photo here, or click to browse</span>
         <input
-          ref={inputRef}
+          ref={browseRef}
           type="file"
-          name={name}
+          accept={PICKER_ACCEPT}
+          onChange={handlePick}
+          className="hidden"
+        />
+      </div>
+
+      {/* Mobile: explicit camera vs gallery choice -- a plain accept="image/*" input with
+          capture="environment" launches the camera directly on most mobile browsers,
+          skipping the photo library entirely, so picking from the gallery needs its own
+          uncaptured input. */}
+      <div className="flex md:hidden gap-2">
+        <button
+          type="button"
+          onClick={() => cameraRef.current?.click()}
+          className="flex-1 rounded-md border border-[var(--gridline)] px-3 py-2 text-sm"
+        >
+          Take photo
+        </button>
+        <button
+          type="button"
+          onClick={() => galleryRef.current?.click()}
+          className="flex-1 rounded-md border border-[var(--gridline)] px-3 py-2 text-sm"
+        >
+          Choose from gallery
+        </button>
+        <input
+          ref={cameraRef}
+          type="file"
           accept="image/*"
           capture="environment"
-          onChange={handleFileChange}
-          className="text-sm"
+          onChange={handlePick}
+          className="hidden"
         />
-        {compressing && <span className="text-xs text-[var(--ink-muted)]">Compressing…</span>}
+        <input
+          ref={galleryRef}
+          type="file"
+          accept={PICKER_ACCEPT}
+          onChange={handlePick}
+          className="hidden"
+        />
       </div>
+
+      {compressing && <span className="text-xs text-[var(--ink-muted)]">Compressing…</span>}
+      {error && <span className="text-xs text-[var(--status-critical)]">{error}</span>}
 
       {existingImageUrl && (
         <label className="flex items-center gap-2 text-sm text-[var(--status-critical)]">
