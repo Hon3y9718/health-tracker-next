@@ -21,7 +21,7 @@ const PRESETS = [
 
 // Product principle: logging water must be near one-tap. Presets submit immediately;
 // the custom amount is a fallback, not the default path.
-export function WaterForm({ drink }: { drink?: Drink }) {
+export function WaterForm({ drink, from }: { drink?: Drink; from?: string }) {
   const action = drink ? editDrink : logWater;
   const [state, formAction, pending] = useActionState(action, undefined);
   const [amount, setAmount] = useState(drink ? String(drink.amount_l) : "0.25");
@@ -30,6 +30,7 @@ export function WaterForm({ drink }: { drink?: Drink }) {
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-4 w-full max-w-sm">
       {drink && <input type="hidden" name="id" value={drink.id} />}
+      {from && <input type="hidden" name="from" value={from} />}
       {!drink && (
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">Quick log</span>

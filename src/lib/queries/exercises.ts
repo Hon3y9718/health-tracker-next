@@ -1,16 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
+import { orIlike } from "@/lib/queries/search";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type Exercise = Tables<"exercises">;
 export type ExerciseDay = Tables<"exercise_days">;
 
-export async function getRecentExercises(limit = 10): Promise<Exercise[]> {
+export async function getRecentExercises(
+  options: { limit?: number; date?: string; from?: string; to?: string; search?: string } = {},
+): Promise<Exercise[]> {
+  const { limit = 10, date, from, to, search } = options;
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("exercises")
-    .select("*")
-    .order("logged_at", { ascending: false })
-    .limit(limit);
+  let query = supabase.from("exercises").select("*").order("logged_at", { ascending: false });
+
+  if (date) query = query.eq("log_date", date);
+  else if (from || to) {
+    if (from) query = query.gte("log_date", from);
+    if (to) query = query.lte("log_date", to);
+  }
+  if (search) query = query.or(orIlike(["exercise_type", "notes"], search));
+
+  const { data, error } = await query.limit(limit);
 
   if (error) throw error;
   return data;
@@ -69,6 +78,13 @@ export async function createExercise(
 export async function deleteExercise(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("exercises").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function bulkDeleteExercises(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = await createClient();
+  const { error } = await supabase.from("exercises").delete().in("id", ids);
   if (error) throw error;
 }
 

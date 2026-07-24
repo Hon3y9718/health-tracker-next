@@ -18,7 +18,7 @@ const PRESETS = ["Running", "Gym", "Yoga", "Swimming", "Cycling", "Walk"];
 // Product principle: logging should stay near one-tap. Presets submit immediately with no
 // duration/notes required -- the custom type field and notes are there when you want them,
 // never blocking submission (same shape as rule #2's "only calories is required").
-export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
+export function ExerciseForm({ exercise, from }: { exercise?: Exercise; from?: string }) {
   const action = exercise ? editExercise : logExercise;
   const [state, formAction, pending] = useActionState(action, undefined);
   const [exerciseType, setExerciseType] = useState(exercise?.exercise_type ?? "");
@@ -27,6 +27,7 @@ export function ExerciseForm({ exercise }: { exercise?: Exercise }) {
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-4 w-full max-w-sm">
       {exercise && <input type="hidden" name="id" value={exercise.id} />}
+      {from && <input type="hidden" name="from" value={from} />}
       {!exercise && (
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">What did you do?</span>

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createDrink, deleteDrink, updateDrink } from "@/lib/queries/drinks";
+import { createDrink, deleteDrink, updateDrink, bulkDeleteDrinks } from "@/lib/queries/drinks";
 
 export type LogWaterState = { error?: string } | undefined;
 
@@ -30,15 +30,22 @@ export async function logWater(
     return { error: error instanceof Error ? error.message : "Could not log drink." };
   }
 
-  redirect("/");
+  redirect(formData.get("from") === "history" ? "/history?tab=water" : "/");
 }
 
 export async function deleteDrinkAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await deleteDrink(id);
-  revalidatePath("/log/water");
   revalidatePath("/");
+  revalidatePath("/log/water");
+  redirect("/history?tab=water");
+}
+
+export async function bulkDeleteDrinksAction(ids: string[]): Promise<void> {
+  await bulkDeleteDrinks(ids);
+  revalidatePath("/");
+  revalidatePath("/history");
 }
 
 export type EditDrinkState = { error?: string } | undefined;
@@ -68,5 +75,5 @@ export async function editDrink(
     return { error: error instanceof Error ? error.message : "Could not update drink." };
   }
 
-  redirect("/log/water");
+  redirect("/history?tab=water");
 }

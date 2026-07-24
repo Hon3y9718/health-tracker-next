@@ -141,6 +141,11 @@ a secondary stat.
 **Do not build streak mechanics.** Streaks break on one bad day and push people toward
 compensatory under-eating the next day. That is the failure mode this app exists to avoid.
 
+Confirmed exception: the exercise activity heatmap shows a current-streak count. The
+concern above is specifically about calorie/food streaks causing compensatory
+under-eating — an exercise streak doesn't carry that risk. Calories, protein, and water
+stay streak-free.
+
 **The "under" status is not a win.** Render it neutral — blue or grey, never green.
 Overshooting the deficit is a flag, not an achievement.
 

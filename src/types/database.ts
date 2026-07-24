@@ -117,6 +117,7 @@ export type Database = {
           fat_g: number | null
           fiber_g: number | null
           id: string
+          image_path: string | null
           log_date: string
           meal_label: string | null
           notes: string | null
@@ -132,6 +133,7 @@ export type Database = {
           fat_g?: number | null
           fiber_g?: number | null
           id?: string
+          image_path?: string | null
           log_date: string
           meal_label?: string | null
           notes?: string | null
@@ -147,6 +149,7 @@ export type Database = {
           fat_g?: number | null
           fiber_g?: number | null
           id?: string
+          image_path?: string | null
           log_date?: string
           meal_label?: string | null
           notes?: string | null
@@ -160,6 +163,8 @@ export type Database = {
         Row: {
           calorie_target: number
           created_at: string
+          daily_insight_date: string | null
+          daily_insight_text: string | null
           fiber_target_g: number
           goal_weight_high_kg: number
           goal_weight_low_kg: number
@@ -174,6 +179,8 @@ export type Database = {
         Insert: {
           calorie_target?: number
           created_at?: string
+          daily_insight_date?: string | null
+          daily_insight_text?: string | null
           fiber_target_g?: number
           goal_weight_high_kg?: number
           goal_weight_low_kg?: number
@@ -188,6 +195,8 @@ export type Database = {
         Update: {
           calorie_target?: number
           created_at?: string
+          daily_insight_date?: string | null
+          daily_insight_text?: string | null
           fiber_target_g?: number
           goal_weight_high_kg?: number
           goal_weight_low_kg?: number
@@ -200,6 +209,41 @@ export type Database = {
           water_target_l?: number
         }
         Relationships: []
+      }
+      weigh_in_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_path: string
+          label: string | null
+          user_id: string
+          weigh_in_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_path: string
+          label?: string | null
+          user_id: string
+          weigh_in_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_path?: string
+          label?: string | null
+          user_id?: string
+          weigh_in_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weigh_in_images_weigh_in_id_fkey"
+            columns: ["weigh_in_id"]
+            isOneToOne: false
+            referencedRelation: "weigh_ins"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weigh_ins: {
         Row: {

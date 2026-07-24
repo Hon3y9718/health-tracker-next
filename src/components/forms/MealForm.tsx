@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { logMeal, editMeal } from "@/app/log/meal/actions";
 import type { Meal } from "@/lib/queries/meals";
+import { ImageField } from "@/components/forms/ImageField";
 
 function todayLocalDate() {
   const now = new Date();
@@ -16,13 +17,22 @@ const inputClass =
 // Rule (CLAUDE.md #2): calories is the only required input; everything else -- protein
 // included -- must submit empty. Product principle: protein gets equal visual weight to
 // calories, so it's the second field shown, not buried with the rest.
-export function MealForm({ meal }: { meal?: Meal }) {
+export function MealForm({
+  meal,
+  imageUrl,
+  from,
+}: {
+  meal?: Meal;
+  imageUrl?: string | null;
+  from?: string;
+}) {
   const action = meal ? editMeal : logMeal;
   const [state, formAction, pending] = useActionState(action, undefined);
 
   return (
     <form action={formAction} className="flex flex-col gap-4 w-full max-w-sm">
       {meal && <input type="hidden" name="id" value={meal.id} />}
+      {from && <input type="hidden" name="from" value={from} />}
       <div className="flex flex-col gap-1">
         <label htmlFor="calories" className="text-sm font-medium">
           Calories
@@ -65,6 +75,8 @@ export function MealForm({ meal }: { meal?: Meal }) {
           className={inputClass}
         />
       </div>
+
+      <ImageField name="image" removeFieldName="remove_image" existingImageUrl={imageUrl} />
 
       <details className="text-sm text-[var(--ink-secondary)]" open={!!meal}>
         <summary className="cursor-pointer select-none">More details (optional)</summary>

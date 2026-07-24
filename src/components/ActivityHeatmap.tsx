@@ -1,4 +1,5 @@
 import type { ExerciseDay } from "@/lib/queries/exercises";
+import { computeCurrentStreak } from "@/lib/streak";
 
 const WEEKS = 53;
 
@@ -34,19 +35,27 @@ function buildWeeks(totalWeeks: number, today: Date): Date[][] {
   return weeks;
 }
 
-// Product principle (CLAUDE.md): no streak mechanics. This renders history only -- what
-// happened on which day -- and deliberately never computes or displays a "current streak"
-// or "days in a row" count, since that's the specific mechanic the app is built to avoid.
-export function ActivityHeatmap({ data }: { data: ExerciseDay[] }) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+// Product principle (CLAUDE.md): no streak mechanics for calories/protein/water -- those
+// stay a neutral historical record, per the rule's original concern about compensatory
+// under-eating after a missed day. The streak count below is a confirmed, scoped exception
+// for exercise specifically, which doesn't carry that same risk.
+export function ActivityHeatmap({ data, todayStr }: { data: ExerciseDay[]; todayStr: string }) {
+  const [y, m, d] = todayStr.split("-").map(Number);
+  const today = new Date(y, m - 1, d);
 
-  const byDate = new Map(data.map((d) => [d.log_date!, d]));
+  const byDate = new Map(data.map((day) => [day.log_date!, day]));
   const weeks = buildWeeks(WEEKS, today);
-  const activeDays = data.filter((d) => (d.session_count ?? 0) > 0).length;
+  const activeDays = data.filter((day) => (day.session_count ?? 0) > 0).length;
+  const streak = computeCurrentStreak(data, todayStr);
 
   return (
     <div>
+      {streak > 0 && (
+        <p className="text-sm mb-2">
+          <span className="text-2xl font-semibold tabular-nums">{streak}</span>
+          <span className="text-[var(--ink-muted)]"> day{streak === 1 ? "" : "s"} in a row</span>
+        </p>
+      )}
       <div className="overflow-x-auto pb-1">
         <div
           className="inline-grid grid-flow-col gap-[3px]"

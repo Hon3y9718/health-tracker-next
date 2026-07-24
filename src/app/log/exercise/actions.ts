@@ -2,7 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createExercise, deleteExercise, updateExercise } from "@/lib/queries/exercises";
+import {
+  createExercise,
+  deleteExercise,
+  updateExercise,
+  bulkDeleteExercises,
+} from "@/lib/queries/exercises";
 
 export type LogExerciseState = { error?: string } | undefined;
 
@@ -35,15 +40,22 @@ export async function logExercise(
     return { error: error instanceof Error ? error.message : "Could not log exercise." };
   }
 
-  redirect("/");
+  redirect(formData.get("from") === "history" ? "/history?tab=exercise" : "/");
 }
 
 export async function deleteExerciseAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await deleteExercise(id);
-  revalidatePath("/log/exercise");
   revalidatePath("/");
+  revalidatePath("/log/exercise");
+  redirect("/history?tab=exercise");
+}
+
+export async function bulkDeleteExercisesAction(ids: string[]): Promise<void> {
+  await bulkDeleteExercises(ids);
+  revalidatePath("/");
+  revalidatePath("/history");
 }
 
 export type EditExerciseState = { error?: string } | undefined;
@@ -78,5 +90,5 @@ export async function editExercise(
     return { error: error instanceof Error ? error.message : "Could not update exercise." };
   }
 
-  redirect("/log/exercise");
+  redirect("/history?tab=exercise");
 }

@@ -1,15 +1,23 @@
 import { createClient } from "@/lib/supabase/server";
+import { deleteAllWeighInImages, deleteAllWeighInImagesForIds } from "@/lib/queries/weighInImages";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type WeighIn = Tables<"weigh_ins">;
 
-export async function getRecentWeighIns(limit = 90): Promise<WeighIn[]> {
+export async function getRecentWeighIns(
+  options: { limit?: number; date?: string; from?: string; to?: string } = {},
+): Promise<WeighIn[]> {
+  const { limit = 90, date, from, to } = options;
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("weigh_ins")
-    .select("*")
-    .order("log_date", { ascending: false })
-    .limit(limit);
+  let query = supabase.from("weigh_ins").select("*").order("log_date", { ascending: false });
+
+  if (date) query = query.eq("log_date", date);
+  else if (from || to) {
+    if (from) query = query.gte("log_date", from);
+    if (to) query = query.lte("log_date", to);
+  }
+
+  const { data, error } = await query.limit(limit);
 
   if (error) throw error;
   return data;
@@ -27,10 +35,7 @@ export async function getWeighInById(id: string): Promise<WeighIn | null> {
   return data;
 }
 
-export async function updateWeighIn(
-  id: string,
-  input: TablesUpdate<"weigh_ins">,
-): Promise<WeighIn> {
+export async function updateWeighIn(id: string, input: TablesUpdate<"weigh_ins">): Promise<WeighIn> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("weigh_ins")
@@ -44,7 +49,8 @@ export async function updateWeighIn(
 }
 
 // Rule (CLAUDE.md #3): logging a weigh-in never depends on a meal or drink existing for the
-// same day.
+// same day. Photos (front/side) are handled separately via lib/queries/weighInImages.ts --
+// a weigh-in can be created before any photo exists.
 export async function createWeighIn(
   input: Pick<TablesInsert<"weigh_ins">, "weight_kg" | "log_date"> &
     Omit<Partial<TablesInsert<"weigh_ins">>, "weight_kg" | "log_date" | "user_id">,
@@ -66,7 +72,18 @@ export async function createWeighIn(
 }
 
 export async function deleteWeighIn(id: string): Promise<void> {
+  // Storage objects have to be cleaned up explicitly before the row goes away -- the FK's
+  // ON DELETE CASCADE only removes the weigh_in_images rows, not their files in Storage.
+  await deleteAllWeighInImages(id);
   const supabase = await createClient();
   const { error } = await supabase.from("weigh_ins").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function bulkDeleteWeighIns(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await deleteAllWeighInImagesForIds(ids);
+  const supabase = await createClient();
+  const { error } = await supabase.from("weigh_ins").delete().in("id", ids);
   if (error) throw error;
 }

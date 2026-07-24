@@ -1,38 +1,8 @@
-// Rule (CLAUDE.md #4): status colors here reuse the same bands the daily_totals view
-// already computed (calorie_status / protein_status / water_status) -- this file only
-// picks a color for a status string, it never re-derives the threshold itself.
-//
+import { statusColor } from "@/lib/status-colors";
+
 // Static server-rendered SVG, same simplification as WeightChart: no hover/tooltip layer
 // yet. Bars are capped at 24px, 4px rounded data-end per the dataviz mark spec, one hue
 // per status (never a rainbow), with a dashed target reference line.
-type CalorieStatus = "under" | "on_target" | "over" | "way_over";
-type LevelStatus = "hit" | "close" | "low";
-
-function statusColor(kind: "calorie" | "level", status: string | null): string {
-  if (status === null) return "var(--ink-muted)";
-  if (kind === "calorie") {
-    switch (status as CalorieStatus) {
-      case "under":
-        return "var(--status-neutral-fg)";
-      case "on_target":
-        return "var(--status-good)";
-      case "over":
-        return "var(--status-serious)";
-      case "way_over":
-        return "var(--status-critical)";
-    }
-  }
-  switch (status as LevelStatus) {
-    case "hit":
-      return "var(--status-good)";
-    case "close":
-      return "var(--status-warning)";
-    case "low":
-      return "var(--status-serious)";
-  }
-  return "var(--ink-muted)";
-}
-
 export type DailyBarChartRow = {
   log_date: string;
   value: number | null;

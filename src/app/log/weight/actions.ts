@@ -2,9 +2,23 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createWeighIn, deleteWeighIn, updateWeighIn } from "@/lib/queries/weighIns";
+import {
+  createWeighIn,
+  deleteWeighIn,
+  updateWeighIn,
+  bulkDeleteWeighIns,
+} from "@/lib/queries/weighIns";
+import {
+  addWeighInImage,
+  replaceWeighInImageByLabel,
+  removeWeighInImageByLabel,
+} from "@/lib/queries/weighInImages";
 
 export type LogWeightState = { error?: string } | undefined;
+
+function fileOrUndefined(value: FormDataEntryValue | null): File | undefined {
+  return value instanceof File && value.size > 0 ? value : undefined;
+}
 
 export async function logWeight(
   _state: LogWeightState,
@@ -20,24 +34,37 @@ export async function logWeight(
     return { error: "Date is required." };
   }
 
+  const frontImage = fileOrUndefined(formData.get("image_front"));
+  const sideImage = fileOrUndefined(formData.get("image_side"));
+
   try {
-    await createWeighIn({
+    const weighIn = await createWeighIn({
       weight_kg: weightKg,
       log_date: logDate,
     });
+
+    if (frontImage) await addWeighInImage(weighIn.id, frontImage, "Front");
+    if (sideImage) await addWeighInImage(weighIn.id, sideImage, "Side");
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not log weigh-in." };
   }
 
-  redirect("/");
+  redirect(formData.get("from") === "history" ? "/history?tab=weight" : "/");
 }
 
 export async function deleteWeighInAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await deleteWeighIn(id);
-  revalidatePath("/log/weight");
   revalidatePath("/");
+  revalidatePath("/log/weight");
+  redirect("/history?tab=weight");
+}
+
+export async function bulkDeleteWeighInsAction(ids: string[]): Promise<void> {
+  await bulkDeleteWeighIns(ids);
+  revalidatePath("/");
+  revalidatePath("/history");
 }
 
 export type EditWeightState = { error?: string } | undefined;
@@ -57,14 +84,31 @@ export async function editWeighIn(
     return { error: "Date is required." };
   }
 
+  const frontImage = fileOrUndefined(formData.get("image_front"));
+  const sideImage = fileOrUndefined(formData.get("image_side"));
+  const removeFront = formData.get("remove_image_front") === "true";
+  const removeSide = formData.get("remove_image_side") === "true";
+
   try {
     await updateWeighIn(id, {
       weight_kg: weightKg,
       log_date: logDate,
     });
+
+    if (frontImage) {
+      await replaceWeighInImageByLabel(id, "Front", frontImage);
+    } else if (removeFront) {
+      await removeWeighInImageByLabel(id, "Front");
+    }
+
+    if (sideImage) {
+      await replaceWeighInImageByLabel(id, "Side", sideImage);
+    } else if (removeSide) {
+      await removeWeighInImageByLabel(id, "Side");
+    }
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not update weigh-in." };
   }
 
-  redirect("/log/weight");
+  redirect("/history?tab=weight");
 }

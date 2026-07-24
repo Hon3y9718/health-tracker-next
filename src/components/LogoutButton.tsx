@@ -1,13 +1,16 @@
 import { logout } from "@/app/actions/logout";
+import { LogoutIcon } from "@/components/icons";
 
 export function LogoutButton() {
   return (
     <form action={logout}>
       <button
         type="submit"
-        className="text-sm text-[var(--ink-secondary)] underline underline-offset-2"
+        aria-label="Sign out"
+        title="Sign out"
+        className="text-[var(--ink-secondary)]"
       >
-        Sign out
+        <LogoutIcon />
       </button>
     </form>
   );

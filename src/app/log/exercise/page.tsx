@@ -1,18 +1,18 @@
 import { ExerciseForm } from "@/components/forms/ExerciseForm";
-import { RecentExercises } from "@/components/lists/RecentExercises";
-import { getRecentExercises } from "@/lib/queries/exercises";
+import { TopNav } from "@/components/TopNav";
 
-export default async function LogExercisePage() {
-  const exercises = await getRecentExercises(10);
+export default async function LogExercisePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const { from } = await searchParams;
 
   return (
     <div className="flex flex-1 flex-col items-center gap-6 p-8">
+      <TopNav />
       <h1 className="text-2xl font-semibold">Log exercise</h1>
-      <ExerciseForm />
-      <div className="w-full max-w-sm flex flex-col gap-3 mt-4">
-        <h2 className="text-sm font-medium text-[var(--ink-secondary)]">Recent</h2>
-        <RecentExercises exercises={exercises} />
-      </div>
+      <ExerciseForm from={from} />
     </div>
   );
 }
