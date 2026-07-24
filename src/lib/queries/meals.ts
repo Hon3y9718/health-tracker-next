@@ -57,6 +57,28 @@ export async function getRecentMeals(
   return data;
 }
 
+// Full, unbounded history for data export -- PostgREST caps any single response at
+// max_rows (1000, see supabase/config.toml), so this pages through in batches rather than
+// silently truncating a year+ of logs.
+export async function getAllMeals(): Promise<Meal[]> {
+  const supabase = await createClient();
+  const activeAccountId = await getActiveAccountId();
+  const pageSize = 1000;
+  const all: Meal[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("meals")
+      .select("*")
+      .eq("user_id", activeAccountId)
+      .order("log_date", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    all.push(...data);
+    if (data.length < pageSize) break;
+  }
+  return all;
+}
+
 // Fetched by id, not listed -- RLS (has_account_access) is the right scope here, not the
 // active account, since a direct link should work regardless of which account you're
 // currently switched into.

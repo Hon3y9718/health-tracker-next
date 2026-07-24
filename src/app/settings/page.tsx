@@ -27,6 +27,29 @@ export default async function SettingsPage() {
         sharedAccounts={sharedAccounts}
         activeAccountId={activeAccountId}
       />
+
+      <hr className="border-[var(--gridline)] w-full max-w-sm" />
+
+      <h1 className="text-2xl font-semibold">Export</h1>
+      <div className="flex flex-col gap-3 w-full max-w-sm">
+        <p className="text-sm text-[var(--ink-muted)]">
+          Download everything logged for this account — meals, water, weigh-ins, and exercise.
+        </p>
+        <div className="flex gap-3">
+          <a
+            href="/api/export?format=csv"
+            className="flex-1 text-center rounded-md border border-[var(--gridline)] px-4 py-3 font-medium transition-colors hover:bg-[var(--foreground)] hover:text-[var(--background)]"
+          >
+            Download CSV
+          </a>
+          <a
+            href="/api/export?format=json"
+            className="flex-1 text-center rounded-md border border-[var(--gridline)] px-4 py-3 font-medium transition-colors hover:bg-[var(--foreground)] hover:text-[var(--background)]"
+          >
+            Download JSON
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

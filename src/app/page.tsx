@@ -18,7 +18,7 @@ import { TimezoneSync } from "@/components/TimezoneSync";
 import { DailyInsight, DailyInsightSkeleton } from "@/components/DailyInsight";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
 import { todayInTimezone } from "@/lib/date-grouping";
-import { HistoryIcon, GoalIcon } from "@/components/icons";
+import { HistoryIcon, SettingsIcon } from "@/components/icons";
 import { getAccessibleAccounts, getActiveAccountId } from "@/lib/account-context";
 
 const CHART_DAY_OPTIONS = [7, 14, 30] as const;
@@ -77,8 +77,8 @@ export default async function DashboardPage({
           <Link href="/history" aria-label="History" title="History" className="text-[var(--ink-secondary)]">
             <HistoryIcon />
           </Link>
-          <Link href="/settings" aria-label="Goals" title="Goals" className="text-[var(--ink-secondary)]">
-            <GoalIcon />
+          <Link href="/settings" aria-label="Settings" title="Settings" className="text-[var(--ink-secondary)]">
+            <SettingsIcon />
           </Link>
           <LogoutButton />
         </div>

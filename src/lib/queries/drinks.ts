@@ -44,6 +44,27 @@ export async function getRecentDrinks(
   return data;
 }
 
+// Full, unbounded history for data export -- see getAllMeals for why this pages through
+// max_rows batches instead of a single unlimited select.
+export async function getAllDrinks(): Promise<Drink[]> {
+  const supabase = await createClient();
+  const activeAccountId = await getActiveAccountId();
+  const pageSize = 1000;
+  const all: Drink[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("drinks")
+      .select("*")
+      .eq("user_id", activeAccountId)
+      .order("log_date", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    all.push(...data);
+    if (data.length < pageSize) break;
+  }
+  return all;
+}
+
 export async function getDrinkById(id: string): Promise<Drink | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("drinks").select("*").eq("id", id).maybeSingle();

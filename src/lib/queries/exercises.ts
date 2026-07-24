@@ -31,6 +31,27 @@ export async function getRecentExercises(
   return data;
 }
 
+// Full, unbounded history for data export -- see meals.ts's getAllMeals for why this pages
+// through max_rows batches instead of a single unlimited select.
+export async function getAllExercises(): Promise<Exercise[]> {
+  const supabase = await createClient();
+  const activeAccountId = await getActiveAccountId();
+  const pageSize = 1000;
+  const all: Exercise[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("exercises")
+      .select("*")
+      .eq("user_id", activeAccountId)
+      .order("log_date", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    all.push(...data);
+    if (data.length < pageSize) break;
+  }
+  return all;
+}
+
 export async function getExerciseById(id: string): Promise<Exercise | null> {
   const supabase = await createClient();
   const { data, error } = await supabase

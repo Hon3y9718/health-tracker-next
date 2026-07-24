@@ -29,6 +29,27 @@ export async function getRecentWeighIns(
   return data;
 }
 
+// Full, unbounded history for data export -- see meals.ts's getAllMeals for why this pages
+// through max_rows batches instead of a single unlimited select.
+export async function getAllWeighIns(): Promise<WeighIn[]> {
+  const supabase = await createClient();
+  const activeAccountId = await getActiveAccountId();
+  const pageSize = 1000;
+  const all: WeighIn[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("weigh_ins")
+      .select("*")
+      .eq("user_id", activeAccountId)
+      .order("log_date", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    all.push(...data);
+    if (data.length < pageSize) break;
+  }
+  return all;
+}
+
 export async function getWeighInById(id: string): Promise<WeighIn | null> {
   const supabase = await createClient();
   const { data, error } = await supabase

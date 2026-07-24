@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BackButton } from "@/components/BackButton";
-import { HomeIcon, HistoryIcon, GoalIcon } from "@/components/icons";
+import { HomeIcon, HistoryIcon, SettingsIcon } from "@/components/icons";
 
 const iconLinkClass = "text-[var(--ink-secondary)]";
 
@@ -33,8 +33,8 @@ export function TopNav({
           </Link>
         )}
         {current !== "settings" && (
-          <Link href="/settings" aria-label="Goals" title="Goals" className={iconLinkClass}>
-            <GoalIcon />
+          <Link href="/settings" aria-label="Settings" title="Settings" className={iconLinkClass}>
+            <SettingsIcon />
           </Link>
         )}
       </div>
