@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { orIlike } from "@/lib/queries/search";
+import { getActiveAccountId } from "@/lib/account-context";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type Exercise = Tables<"exercises">;
@@ -10,7 +11,12 @@ export async function getRecentExercises(
 ): Promise<Exercise[]> {
   const { limit = 10, date, from, to, search } = options;
   const supabase = await createClient();
-  let query = supabase.from("exercises").select("*").order("logged_at", { ascending: false });
+  const activeAccountId = await getActiveAccountId();
+  let query = supabase
+    .from("exercises")
+    .select("*")
+    .eq("user_id", activeAccountId)
+    .order("logged_at", { ascending: false });
 
   if (date) query = query.eq("log_date", date);
   else if (from || to) {
@@ -60,14 +66,11 @@ export async function createExercise(
     Omit<Partial<TablesInsert<"exercises">>, "exercise_type" | "log_date" | "user_id">,
 ): Promise<Exercise> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const activeAccountId = await getActiveAccountId();
 
   const { data, error } = await supabase
     .from("exercises")
-    .insert({ ...input, user_id: user.id })
+    .insert({ ...input, user_id: activeAccountId })
     .select()
     .single();
 
@@ -92,6 +95,7 @@ export async function bulkDeleteExercises(ids: string[]): Promise<void> {
 // exercise_types) -- never a computed streak length (see exercise_days_view migration).
 export async function getExerciseDays(daysBack = 371): Promise<ExerciseDay[]> {
   const supabase = await createClient();
+  const activeAccountId = await getActiveAccountId();
   const since = new Date();
   since.setDate(since.getDate() - daysBack);
   const sinceDate = since.toISOString().slice(0, 10);
@@ -99,6 +103,7 @@ export async function getExerciseDays(daysBack = 371): Promise<ExerciseDay[]> {
   const { data, error } = await supabase
     .from("exercise_days")
     .select("*")
+    .eq("user_id", activeAccountId)
     .gte("log_date", sinceDate)
     .order("log_date", { ascending: true });
 

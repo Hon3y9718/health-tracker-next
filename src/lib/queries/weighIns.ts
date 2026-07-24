@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { deleteAllWeighInImages, deleteAllWeighInImagesForIds } from "@/lib/queries/weighInImages";
+import { getActiveAccountId } from "@/lib/account-context";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type WeighIn = Tables<"weigh_ins">;
@@ -9,7 +10,12 @@ export async function getRecentWeighIns(
 ): Promise<WeighIn[]> {
   const { limit = 90, date, from, to } = options;
   const supabase = await createClient();
-  let query = supabase.from("weigh_ins").select("*").order("log_date", { ascending: false });
+  const activeAccountId = await getActiveAccountId();
+  let query = supabase
+    .from("weigh_ins")
+    .select("*")
+    .eq("user_id", activeAccountId)
+    .order("log_date", { ascending: false });
 
   if (date) query = query.eq("log_date", date);
   else if (from || to) {
@@ -56,14 +62,11 @@ export async function createWeighIn(
     Omit<Partial<TablesInsert<"weigh_ins">>, "weight_kg" | "log_date" | "user_id">,
 ): Promise<WeighIn> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const activeAccountId = await getActiveAccountId();
 
   const { data, error } = await supabase
     .from("weigh_ins")
-    .insert({ ...input, user_id: user.id })
+    .insert({ ...input, user_id: activeAccountId })
     .select()
     .single();
 

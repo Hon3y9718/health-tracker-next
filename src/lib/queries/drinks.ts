@@ -1,14 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { orIlike } from "@/lib/queries/search";
+import { getActiveAccountId } from "@/lib/account-context";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type Drink = Tables<"drinks">;
 
 export async function getDrinksForDate(logDate: string): Promise<Drink[]> {
   const supabase = await createClient();
+  const activeAccountId = await getActiveAccountId();
   const { data, error } = await supabase
     .from("drinks")
     .select("*")
+    .eq("user_id", activeAccountId)
     .eq("log_date", logDate)
     .order("drunk_at", { ascending: true });
 
@@ -21,7 +24,12 @@ export async function getRecentDrinks(
 ): Promise<Drink[]> {
   const { limit = 10, date, from, to, search } = options;
   const supabase = await createClient();
-  let query = supabase.from("drinks").select("*").order("drunk_at", { ascending: false });
+  const activeAccountId = await getActiveAccountId();
+  let query = supabase
+    .from("drinks")
+    .select("*")
+    .eq("user_id", activeAccountId)
+    .order("drunk_at", { ascending: false });
 
   if (date) query = query.eq("log_date", date);
   else if (from || to) {
@@ -63,14 +71,11 @@ export async function createDrink(
     Omit<Partial<TablesInsert<"drinks">>, "amount_l" | "log_date" | "user_id">,
 ): Promise<Drink> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const activeAccountId = await getActiveAccountId();
 
   const { data, error } = await supabase
     .from("drinks")
-    .insert({ ...input, user_id: user.id })
+    .insert({ ...input, user_id: activeAccountId })
     .select()
     .single();
 

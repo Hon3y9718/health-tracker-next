@@ -70,22 +70,21 @@ export async function getWeighInImageUrlsByImageId(
   return byImageId;
 }
 
+// ownerId is the weigh-in's own owner (not necessarily whoever is logged in), so a
+// collaborator adding a photo to someone else's weigh-in files it under the right account's
+// Storage folder and row -- see the same reasoning in lib/queries/storage.ts.
 export async function addWeighInImage(
   weighInId: string,
   file: File,
   label: string | null,
+  ownerId: string,
 ): Promise<WeighInImage> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-
-  const image_path = await uploadImage(BUCKET, file);
+  const image_path = await uploadImage(BUCKET, file, ownerId);
 
   const { data, error } = await supabase
     .from("weigh_in_images")
-    .insert({ weigh_in_id: weighInId, user_id: user.id, label, image_path })
+    .insert({ weigh_in_id: weighInId, user_id: ownerId, label, image_path })
     .select()
     .single();
 
@@ -115,13 +114,14 @@ export async function replaceWeighInImageByLabel(
   weighInId: string,
   label: string,
   file: File,
+  ownerId: string,
 ): Promise<WeighInImage> {
   const existing = await getWeighInImages(weighInId);
   const match = existing.find((img) => img.label === label);
   if (match) {
     await deleteWeighInImage(match.id);
   }
-  return addWeighInImage(weighInId, file, label);
+  return addWeighInImage(weighInId, file, label, ownerId);
 }
 
 export async function removeWeighInImageByLabel(weighInId: string, label: string): Promise<void> {

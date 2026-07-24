@@ -16,8 +16,10 @@ import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import { LogoutButton } from "@/components/LogoutButton";
 import { TimezoneSync } from "@/components/TimezoneSync";
 import { DailyInsight, DailyInsightSkeleton } from "@/components/DailyInsight";
+import { AccountSwitcher } from "@/components/AccountSwitcher";
 import { todayInTimezone } from "@/lib/date-grouping";
 import { HistoryIcon, GoalIcon } from "@/components/icons";
+import { getAccessibleAccounts, getActiveAccountId } from "@/lib/account-context";
 
 const CHART_DAY_OPTIONS = [7, 14, 30] as const;
 const WEIGHT_DAY_OPTIONS = [30, 60, 90, 180] as const;
@@ -51,13 +53,16 @@ export default async function DashboardPage({
   const settings = await getUserSettings();
   const today = todayInTimezone(settings.timezone);
 
-  const [daily, weekly, weightProgress, recentDaily, exerciseDays] = await Promise.all([
-    getDailyTotals(today),
-    getWeeklyTotals(1),
-    getWeightProgress(weightDays),
-    getRecentDailyTotals(chartDays),
-    getExerciseDays(heatmapDays),
-  ]);
+  const [daily, weekly, weightProgress, recentDaily, exerciseDays, accounts, activeAccountId] =
+    await Promise.all([
+      getDailyTotals(today),
+      getWeeklyTotals(1),
+      getWeightProgress(weightDays),
+      getRecentDailyTotals(chartDays),
+      getExerciseDays(heatmapDays),
+      getAccessibleAccounts(),
+      getActiveAccountId(),
+    ]);
 
   const thisWeek = weekly[0];
   const latestWeight = weightProgress[0];
@@ -68,6 +73,7 @@ export default async function DashboardPage({
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Health tracker</h1>
         <div className="flex items-center gap-4">
+          {accounts.length > 1 && <AccountSwitcher accounts={accounts} activeId={activeAccountId} />}
           <Link href="/history" aria-label="History" title="History" className="text-[var(--ink-secondary)]">
             <HistoryIcon />
           </Link>

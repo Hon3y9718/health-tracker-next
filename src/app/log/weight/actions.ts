@@ -7,6 +7,7 @@ import {
   deleteWeighIn,
   updateWeighIn,
   bulkDeleteWeighIns,
+  getWeighInById,
 } from "@/lib/queries/weighIns";
 import {
   addWeighInImage,
@@ -43,8 +44,8 @@ export async function logWeight(
       log_date: logDate,
     });
 
-    if (frontImage) await addWeighInImage(weighIn.id, frontImage, "Front");
-    if (sideImage) await addWeighInImage(weighIn.id, sideImage, "Side");
+    if (frontImage) await addWeighInImage(weighIn.id, frontImage, "Front", weighIn.user_id);
+    if (sideImage) await addWeighInImage(weighIn.id, sideImage, "Side", weighIn.user_id);
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not log weigh-in." };
   }
@@ -90,19 +91,24 @@ export async function editWeighIn(
   const removeSide = formData.get("remove_image_side") === "true";
 
   try {
+    const existing = await getWeighInById(id);
+    if (!existing) {
+      return { error: "Weigh-in not found." };
+    }
+
     await updateWeighIn(id, {
       weight_kg: weightKg,
       log_date: logDate,
     });
 
     if (frontImage) {
-      await replaceWeighInImageByLabel(id, "Front", frontImage);
+      await replaceWeighInImageByLabel(id, "Front", frontImage, existing.user_id);
     } else if (removeFront) {
       await removeWeighInImageByLabel(id, "Front");
     }
 
     if (sideImage) {
-      await replaceWeighInImageByLabel(id, "Side", sideImage);
+      await replaceWeighInImageByLabel(id, "Side", sideImage, existing.user_id);
     } else if (removeSide) {
       await removeWeighInImageByLabel(id, "Side");
     }

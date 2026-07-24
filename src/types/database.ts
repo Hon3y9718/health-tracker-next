@@ -39,6 +39,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_links: {
+        Row: {
+          collaborator_id: string
+          created_at: string
+          id: string
+          owner_id: string
+        }
+        Insert: {
+          collaborator_id: string
+          created_at?: string
+          id?: string
+          owner_id: string
+        }
+        Update: {
+          collaborator_id?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
       drinks: {
         Row: {
           amount_l: number
@@ -370,7 +391,26 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      find_user_id_by_email: { Args: { lookup_email: string }; Returns: string }
+      has_account_access: { Args: { target_user_id: string }; Returns: boolean }
+      list_accounts_shared_with_me: {
+        Args: never
+        Returns: {
+          created_at: string
+          link_id: string
+          owner_email: string
+          owner_id: string
+        }[]
+      }
+      list_my_collaborators: {
+        Args: never
+        Returns: {
+          collaborator_email: string
+          collaborator_id: string
+          created_at: string
+          link_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

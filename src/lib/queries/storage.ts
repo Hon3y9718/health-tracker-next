@@ -8,17 +8,20 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   "image/webp": "webp",
 };
 
-// Objects are stored at "<user_id>/<uuid>.<ext>" -- bucket RLS policies (see
-// storage_buckets migration) enforce that a user can only read/write their own folder.
-export async function uploadImage(bucket: ImageBucket, file: File): Promise<string> {
+// Objects are stored at "<owner_user_id>/<uuid>.<ext>" -- bucket RLS policies (see
+// storage_buckets + extend_rls_for_collaborators migrations) check has_account_access()
+// against that folder name, so a collaborator can read/write it too. ownerId is passed in
+// explicitly by the caller rather than derived from the session, since the correct owner is
+// whichever account the data belongs to (the active account for new records, or the
+// existing record's own user_id when editing) -- not necessarily whoever is logged in.
+export async function uploadImage(
+  bucket: ImageBucket,
+  file: File,
+  ownerId: string,
+): Promise<string> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-
   const ext = EXTENSION_BY_MIME[file.type] ?? "jpg";
-  const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+  const path = `${ownerId}/${crypto.randomUUID()}.${ext}`;
 
   const { error } = await supabase.storage.from(bucket).upload(path, file, {
     contentType: file.type || "image/jpeg",

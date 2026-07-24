@@ -7,17 +7,24 @@ import {
   getSignedImageUrls,
 } from "@/lib/queries/storage";
 import { orIlike } from "@/lib/queries/search";
+import { getActiveAccountId } from "@/lib/account-context";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type Meal = Tables<"meals">;
 
 const BUCKET = "meal-images" as const;
 
+// Rule (CLAUDE.md #3 extended to collaborators): RLS now allows seeing every account you
+// have access to (your own + any shared with you), so every list query needs an explicit
+// active-account filter -- otherwise a collaborator's query would silently merge rows from
+// both accounts instead of showing one account's data at a time.
 export async function getMealsForDate(logDate: string): Promise<Meal[]> {
   const supabase = await createClient();
+  const activeAccountId = await getActiveAccountId();
   const { data, error } = await supabase
     .from("meals")
     .select("*")
+    .eq("user_id", activeAccountId)
     .eq("log_date", logDate)
     .order("eaten_at", { ascending: true });
 
@@ -30,7 +37,12 @@ export async function getRecentMeals(
 ): Promise<Meal[]> {
   const { limit = 10, date, from, to, search } = options;
   const supabase = await createClient();
-  let query = supabase.from("meals").select("*").order("eaten_at", { ascending: false });
+  const activeAccountId = await getActiveAccountId();
+  let query = supabase
+    .from("meals")
+    .select("*")
+    .eq("user_id", activeAccountId)
+    .order("eaten_at", { ascending: false });
 
   if (date) query = query.eq("log_date", date);
   else if (from || to) {
@@ -45,6 +57,9 @@ export async function getRecentMeals(
   return data;
 }
 
+// Fetched by id, not listed -- RLS (has_account_access) is the right scope here, not the
+// active account, since a direct link should work regardless of which account you're
+// currently switched into.
 export async function getMealById(id: string): Promise<Meal | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("meals").select("*").eq("id", id).maybeSingle();
@@ -90,8 +105,12 @@ export async function updateMeal(
     if (existing?.image_path) {
       await deleteImage(BUCKET, existing.image_path).catch(() => {});
     }
+    // Use the meal's own owner, not the active account -- a direct edit link should upload
+    // to the account the meal actually belongs to even if that's not what's switched-to.
     const image_path =
-      imageAction.type === "replace" ? await uploadImage(BUCKET, imageAction.file) : null;
+      imageAction.type === "replace" && existing
+        ? await uploadImage(BUCKET, imageAction.file, existing.user_id)
+        : null;
     imagePatch = { image_path };
   }
 
@@ -114,16 +133,14 @@ export async function createMeal(
   image?: File | null,
 ): Promise<Meal> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const activeAccountId = await getActiveAccountId();
 
-  const image_path = image && image.size > 0 ? await uploadImage(BUCKET, image) : null;
+  const image_path =
+    image && image.size > 0 ? await uploadImage(BUCKET, image, activeAccountId) : null;
 
   const { data, error } = await supabase
     .from("meals")
-    .insert({ ...input, image_path, user_id: user.id })
+    .insert({ ...input, image_path, user_id: activeAccountId })
     .select()
     .single();
 
